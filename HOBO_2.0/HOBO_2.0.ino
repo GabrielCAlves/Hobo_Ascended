@@ -6,8 +6,8 @@
 // definir valores
 #define THRESHOLD 300
 
-#define LF_SPEED 3000
-#define TURN_TIMES 50
+#define LF_SPEED 2500
+#define TURN_TIMES 25
 #define REG_TIMES 5
 
 // definir sensores US
@@ -39,18 +39,25 @@ void setup() {
 }
 
 void loop() {
-  lineFollower();
+  bool rightG = rightColor.isGreen();
+  bool leftG = leftColor.isGreen();
+
+  Serial.print(leftG);
+  Serial.print(" ");
+  Serial.println(rightG);
+
+  delay(100);
 }
 
 void lineFollower() {
-  int repFOLLOW = 25;
-
   bool rightG = rightColor.isGreen();
   bool leftG = leftColor.isGreen();
-  int diff = rightIR.readVal() - leftIR.readVal();
-
-  Serial.println(diff);
-
+  
+  int rightVal = (double)rightIR.readVal()*0.68;
+  int leftVal = leftIR.readVal();
+    
+  int diff = rightVal - leftVal;
+  
   if (rightG && leftG) turnAround();
   else if (rightG) turnColor('R');
   else if (leftG) turnColor('L');
