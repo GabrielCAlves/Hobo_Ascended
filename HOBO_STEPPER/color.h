@@ -2,16 +2,19 @@
 #define __COLOR_H
 
 #define MAX_COLOR 200
-#define MIN_COLOR 0
-#define MIN_DIFF 30
+#define MIN_COLOR 130
+#define MIN_DIFF 20
 
 bool greenCheck(int r, int g, int b) {
   if ((r < MAX_COLOR) && (b < MAX_COLOR)
       && (r > MIN_COLOR) && (g > MIN_COLOR) && (b > MIN_COLOR)
       && ((g - b) > MIN_DIFF) && ((g - r) > MIN_DIFF)) {
     return true;
-  }
 
+    Serial.print(r);
+    Serial.print(g);
+    Serial.print(b);
+  }
   else return false;
 
 }
@@ -60,15 +63,15 @@ struct Sensor {
   void getReadings() {
     setSensors(LOW, LOW);
     leitura[0] = pulseIn(out, LOW);
-    delay(3);
+    delay(2);
 
     setSensors(HIGH, HIGH);
     leitura[1] = pulseIn(out, LOW);
-    delay(3);
+    delay(2);
 
     setSensors(LOW, HIGH);
     leitura[2] = pulseIn(out, LOW);
-    delay(3);
+    delay(2);
 
     makeMap();
   }
