@@ -2,25 +2,14 @@
 #include "color.h"
 #include "motor.h"
 #include "ir.h"
+#include "us.h"
 
-// definir valores
-#define THRESHOLD 300
+#define THRESHOLD 200
 
-#define LF_SPEED 150
-#define TURN_TIMES 25
+#define LF_SPEED 2500
+#define TURN_TIMES 50
 #define REG_TIMES 5
 
-// definir sensores US
-Ultrasonic rightUS(3, 4);
-Ultrasonic frontUS(9, 8);
-Ultrasonic leftUS(5, 6);
-
-// definir sensores IR
-IR rightIR(A8);
-IR centerIR(A9);
-IR leftIR(A10);
-
-// definir sensores cor
 int rs[] = {30, 31, 32, 33};
 int ls[] = {36, 37, 38, 39};
 
@@ -30,40 +19,103 @@ int leftThresh[] = {25, 120, 27, 135, 23, 115};
 Sensor rightColor(rs, 34, rightThresh);
 Sensor leftColor(ls, 35, leftThresh);
 
+int consecutiveCount = 0;
+bool finishedLF = false;
+
 void setup() {
-
-  setMotors();
-
   Serial.begin(9600);
-
 }
+
+int loopCount = 0;
 
 void loop() {
-  lineFollower();
+  loopCount++;
+
+  if (!finishedLF) lineFollower(true);
+  else rescueArea();
+
+  lineFollower(true);
 }
 
-void lineFollower() {
+void testGreen() {
+  Serial.print("L ");
+  leftColor.getReadings();
+  leftColor.displayValues();
+  Serial.print(leftColor.isGreen());
+  Serial.print("   ");
+  Serial.print("R ");
+  rightColor.getReadings();
+  rightColor.displayValues();
+  Serial.print(rightColor.isGreen());
+  Serial.println();
+}
+
+int getDiff() {
+  int rightVal = (double)rightIR.readVal() * 0.68;
+  int leftVal = leftIR.readVal();
+  int diff = rightVal - leftVal;
+
+  return diff;
+}
+
+void turn(int diff, int times=REG_TIMES) {
+  if (diff > THRESHOLD) drive(RIGHT, TURN_TIMES);
+  else if (diff < -THRESHOLD) drive(LEFT, TURN_TIMES);
+  else drive(FRONT, times);
+}
+
+void doGreen() {
   bool rightG = rightColor.isGreen();
   bool leftG = leftColor.isGreen();
-  
-  int rightVal = (double)rightIR.readVal()*0.68;
-  int leftVal = leftIR.readVal();
-    
-  int diff = rightVal - leftVal;
-  
-  if (rightG && leftG) turnAround();
+
+  if (!rightG && !leftG) return;
+  else if (rightG && leftG) turnAround();
   else if (rightG) turnColor('R');
   else if (leftG) turnColor('L');
 
-  if (diff > THRESHOLD) drive(RIGHT, TURN_TIMES, LF_SPEED);
-  else if (diff < -THRESHOLD) drive(LEFT, TURN_TIMES, LF_SPEED);
-  else drive(FRONT, REG_TIMES, LF_SPEED);
-
+  //leftColor.displayValues();
+  //Serial.print(" ");
+  //rightColor.displayValues();
+  //Serial.println();
 }
 
-void obstacleDeflect() {
-  int dist = frontUS.read();
+void doRamp() {
+  bool isRamp = rampDetect();
+  consecutiveCount = (isRamp ? consecutiveCount + 1 : 0);
+  if (consecutiveCount >= 3) {
+    drive(BACK, 100);
+    finishedLF = true;
+  }
+}
 
-  if (dist < 4 && dist > 0) turnObstacle();
+void rescueArea() {
+  int ld, rd;
 
+  bool rampL = true, rampR = true;
+  while (rampL && rampR) {
+    ld = leftUS.read();
+    rd = rightUS.read();
+
+    rampL = (0 < ld) && (ld < 7);
+    rampR = (0 < rd) && (rd < 7);
+
+    while (true) {
+      lineFollower(false);
+    }
+  }
+
+  drive(FRONT, 50);
+
+  int side = (ld > rd) ? LEFT : RIGHT;
+  detectVictim(side);
+}
+
+void lineFollower(bool notOnRamp) {
+  if (notOnRamp) {
+    doRamp(); if (finishedLF) return;
+    doGreen();
+    if (nearFront(5)) turnObstacle();
+    turn(getDiff());
+  }
+  turn(getDiff(), 50);
 }

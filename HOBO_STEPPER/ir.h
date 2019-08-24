@@ -13,4 +13,7 @@ struct IR {
   }
 };
 
+IR rightIR(A8);
+IR leftIR(A9);
+
 #endif
